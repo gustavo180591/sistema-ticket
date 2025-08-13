@@ -1,0 +1,1 @@
+export const fmtDate = (d: string|Date) => new Date(d).toISOString().slice(0,10);

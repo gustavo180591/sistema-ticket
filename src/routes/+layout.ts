@@ -1,0 +1,1 @@
+export const prerender = false; // app dinámica
