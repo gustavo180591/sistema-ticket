@@ -1,36 +1,86 @@
-version: '3.9'
+version: '3.8'
+
 services:
+  # PostgreSQL Database
   db:
     image: postgres:16-alpine
+    container_name: sistema-ticket-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: sistema_ticket
-    ports:
-      - '5432:5432'
+      POSTGRES_DB: sistema-ticket
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+      - ./apps/backend/prisma/migrations:/docker-entrypoint-initdb.d/migrations
+    ports:
+      - "5447:5432"
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sistema-ticket"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 5
 
-  app:
-    build: .
+  # Backend API (NestJS)
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+      target: development
+    container_name: sistema-ticket-backend
     depends_on:
       db:
         condition: service_healthy
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/sistema_ticket?schema=public
-      SESSION_TTL_HOURS: 72
-      NODE_ENV: production
     ports:
-      - '3000:3000'
+      - "3012:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/sistema-ticket?schema=public
+      - JWT_SECRET=dev_jwt_secret_change_me
+      - ADMIN_PASSWORD=admin123
     volumes:
-      - uploads:/app/data/uploads
-    command: sh -c "npx prisma migrate deploy && node build/index.js"
+      - ./apps/backend:/app/apps/backend
+      - /app/node_modules
+    command: >
+      sh -c "npm install && 
+             npx prisma generate && 
+             npx prisma migrate dev --name init && 
+             npm run start:dev"
+
+  # Frontend (SvelteKit)
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      target: development
+    container_name: sistema-ticket-frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+    environment:
+      - NODE_ENV=development
+      - VITE_API_BASE_URL=http://localhost:3000/api
+    volumes:
+      - ./apps/frontend:/app/apps/frontend
+      - /app/node_modules
+    command: >
+      sh -c "npm install && 
+             npm run dev -- --host 0.0.0.0 --port 5173"
+
+  # Optional: Nginx reverse proxy for production
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: sistema-ticket-nginx
+  #   depends_on:
+  #     - frontend
+  #     - backend
+  #   ports:
+  #     - "80:80"
+  #   volumes:
+  #     - ./docker/nginx/conf.d:/etc/nginx/conf.d
+  #     - ./apps/frontend/dist:/usr/share/nginx/html
 
 volumes:
-  db_data:
-  uploads:
+  postgres_data:
+  # Uncomment for production
+  # node_modules:

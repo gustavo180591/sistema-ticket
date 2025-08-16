@@ -1,5 +1,6 @@
 // Prisma + PostgreSQL
-// Ejecutar: npx prisma generate && npx prisma migrate dev --name init
+// Ejecutar después de ajustar: 
+// npx prisma format && npx prisma generate && npx prisma migrate dev --name init
 
 generator client {
   provider = "prisma-client-js"
@@ -18,15 +19,17 @@ enum TicketStatus {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
-  passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             Int       @id @default(autoincrement())
+  email          String    @unique
+  name           String
+  passwordHash   String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
+  // Relaciones
+  sessions       Session[]
   assignedTickets Ticket[] @relation("Assignee")
-  comments        Comment[]
+  comments       Comment[]
 }
 
 model Ticket {
@@ -34,11 +37,12 @@ model Ticket {
   subject     String
   description String?
   status      TicketStatus  @default(PENDING)
-  assigneeId  String?
+  assigneeId  Int?
   assignee    User?         @relation("Assignee", fields: [assigneeId], references: [id])
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
+  // Relaciones
   comments    Comment[]
   attachments Attachment[]
 }
@@ -48,7 +52,7 @@ model Comment {
   content   String
   ticketId  Int
   ticket    Ticket   @relation(fields: [ticketId], references: [id])
-  authorId  String
+  authorId  Int
   author    User     @relation(fields: [authorId], references: [id])
   createdAt DateTime @default(now())
 }
@@ -64,10 +68,11 @@ model Attachment {
 }
 
 model Session {
-  id        String   @id // token
-  userId    String
+  id        Int      @id @default(autoincrement())
+  userId    Int
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
   expiresAt DateTime
+
   @@index([userId])
 }
