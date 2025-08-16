@@ -11,9 +11,17 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppController = void 0;
 const common_1 = require("@nestjs/common");
+const prisma_service_1 = require("./prisma.service");
 let AppController = class AppController {
-    getHello() {
-        return 'Hola Gustavo 🚀, tu backend ya está funcionando con NestJS y Prisma 🎉';
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async getHello() {
+        const usersCount = await this.prisma.user.count();
+        return {
+            message: 'Hola Gustavo 🚀, NestJS + Prisma + PostgreSQL están listos 🎉',
+            totalUsuarios: usersCount,
+        };
     }
 };
 exports.AppController = AppController;
@@ -21,9 +29,10 @@ __decorate([
     (0, common_1.Get)(),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
-    __metadata("design:returntype", String)
+    __metadata("design:returntype", Promise)
 ], AppController.prototype, "getHello", null);
 exports.AppController = AppController = __decorate([
-    (0, common_1.Controller)()
+    (0, common_1.Controller)(),
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
 ], AppController);
 //# sourceMappingURL=app.controller.js.map
